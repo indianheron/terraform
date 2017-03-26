@@ -1,0 +1,81 @@
+---
+# tasks file for mysql
+- name: 1. Install MySQL server package
+  apt: name={{ item }} state=present
+  with_items:
+    - mysql-server-5.6
+    - mysql-client-5.6
+    - python-mysqldb
+    - libmysqlclient-dev
+
+#- name: 1. Install python-mysqldb package
+#  apt: name=python-mysqldb state=present
+
+#- name: 5. Create a database user
+#  mysql_user: name=root password=root host=localhost state=present
+#  tags:
+#    - wp-user
+
+- name: 2. Start Mysql Service
+  service: name=mysql state=started enabled=true
+
+- name: Copy the root credentials as .my.cnf file
+  template: src=root.cnf.j2 dest=~/.my.cnf mode=0600
+  notify:
+     - Restart MySQL
+
+- name: 5. Create a database user
+  mysql_user: name=root password={{ mysql_root_pass }} host=localhost state=present login_user=root login_password="" login_host=localhost
+  tags:
+    - wp-user
+
+- name: 3. Create a new database
+  mysql_db: name=wordpress state=present collation=utf8_general_ci login_user=root login_password={{ mysql_root_pass }} login_host=localhost
+  ignore_errors: yes
+  tags:
+    - wp-user
+
+- name: 4. Import Database
+  mysql_db:
+    name: wordpress
+    state: import
+    target: /home/ubuntu/wordpresslms-wplearning/wordpress.14-02-2017.sql
+
+#- name: 5. Create a database user
+#  mysql_user: name=root password=root host=localhost state=present
+#  tags:
+#    - wp-user
+
+- name: 6. Create a database user
+  mysql_user: name=wordpressuser password=password priv=wordpress.*:ALL host=localhost state=present
+  tags:
+    - wp-user
+
+- name: 7. Ensure Anonymous user(s) are not in the database
+  mysql_user: name='' host={{ item }} state=absent
+  with_items:
+    - localhost
+    - "{{ ansible_hostname }}"
+
+#- name: 5. Create a WP user
+#  mysql_user: name=wordpressuser password=password login_user=root login_password={{ mysql_root_pass }} login_host=localhost priv=wordpress.*:ALL host=localhost state=present
+#  tags:
+#    - wp-user
+
+#- name: 6. Insert sample data
+#  shell: cat wordpresslms-wplearning/wordpress.14-02-2017.sql | mysql -u root -proot wordpress
+#  args:
+#    chdir: /home/ubuntu/
+
+#- name: 6. Import Database 
+#  mysql_db:
+#    name: wordpress
+#    state: import
+#    target: /home/ubuntu/wordpresslms-wplearning/wordpress.14-02-2017.sql
+
+- name: 8. Install MySQL extension for PHP
+  apt: name={{ item }} state=present
+  with_items:
+    - php5-mysql
+    - php5-gd 
+    - libssh2-php

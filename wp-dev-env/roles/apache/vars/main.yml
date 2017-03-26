@@ -1,0 +1,7 @@
+---
+# vars file for apache
+serv_name: "<ser_name>"
+serv_alias: "<ser_alias>"
+tag_url: "<tag_url>"
+gz_name: "<gz f name>"
+extract_name: "<post extract name>"

@@ -1,0 +1,74 @@
+---
+# tasks file for apache
+- name: 1. install Apache
+  apt: name=apache2 state=present update_cache=yes
+
+- name: 2. install PHP module for Apache
+  apt: name=libapache2-mod-php5 state=present
+
+- name: 3. start Apache
+  service: name=apache2 state=running enabled=yes
+
+#- name: 4. Move default.conf 
+#  copy:
+#    src: default.conf
+#    dest: /etc/apache2/sites-available/000-default.conf
+#    owner: root
+#    group: root
+#    mode: 0644
+
+- name: 4. Move default.conf
+  template: src=default.conf.j2 dest=/etc/apache2/sites-available/000-default.conf mode=0644
+
+- name: 4. Wget the TAG
+  shell: wget {{ tag_url }}  
+  args:
+    chdir: /home/ubuntu 
+  tags:
+    - wget
+
+#- name: 5. Move Tag Tar.gz to Docroot
+#  copy:
+#    src: wplearning.tar.gz
+#    dest: /home/ubuntu/
+
+- name: 6. rewrite module
+  shell: a2enmod rewrite
+  notify:
+    - Restart Apache
+
+- name: 6. Untar the Archieve 
+  shell: tar -xzf {{ gz_name }}
+  args:
+    chdir: /home/ubuntu/
+
+- name: 7. Move the content to Docroot
+  shell: cd {{ extract_name }}; sudo cp -r * /var/www/html/
+  args:
+    chdir: /home/ubuntu/
+
+- name: 8. Move the index.html
+  shell: cd /var/www/html/; mv index.html _in.htm
+  args:
+    chdir: /home/ubuntu/
+
+- name: 9. Move HTACCESS to Docroot
+  copy: 
+    src: htaccess
+    dest: /var/www/html/.htaccess
+    owner: www-data
+    group: www-data
+    mode: 0644
+
+- name: 10. Edit the permissions 
+  shell: chown -R root:www-data *
+  args:
+    chdir: /var/www/
+  notify:
+    - Restart Apache
+
+- name: 11. Edit the Cache permission 
+  file:
+    path: /var/www/html/wp-content/cache
+    owner: www-data
+    group: www-data
